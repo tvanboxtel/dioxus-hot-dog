@@ -6,6 +6,11 @@ fn main() {
     dioxus::launch(App);
 }
 
+#[derive(serde::Deserialize)]
+struct DogApi {
+    message: String,
+}
+
 #[derive(Clone)]
 struct TitleState(String);
 
@@ -30,22 +35,25 @@ fn Title() -> Element {
     }
 }
 
-
 #[component]
 fn DogView() -> Element {
-    let mut img_src = use_signal(|| "https://images.dog.ceo/breeds/pitbull/dog-3981540_1280.jpg");
-    let skip = move |evt| {};
-    let save = move |evt| {
-        img_src.set("https://images.dog.ceo/breeds/puggle/IMG_151824.jpg",);
-    };
+    let mut img_src = use_resource(|| async move {
+        let response = reqwest::get("https://dog.ceo/api/breeds/image/random")
+            .await
+            .unwrap()
+            .json::<DogApi>()
+            .await
+            .unwrap();
+        response.message
+    });
+
     rsx! {
         div { id: "dogview",
-            img { src: "{img_src}" }
+            img { src: img_src.cloned().unwrap_or_default() }
         }
         div { id: "buttons",
-            button { id: "skip", onclick: skip, "Skip" }
-            button { id: "save", onclick: save, "Save!" }
+            button { id: "skip", onclick: move |_| img_src.restart(), "Skip" }
+            button { id: "save", onclick: move |_| img_src.restart(), "Save!" }
         }
     }
 }
-
