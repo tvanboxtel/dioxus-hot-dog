@@ -25,6 +25,22 @@ fn App() -> Element {
     }
 }
 
+#[post("/api/save_dog")]
+async fn save_dog(image: String) -> Result<()> {
+    use std::io::Write;
+
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .create(true)
+        .open("dogs.txt")
+        .unwrap();
+
+    file.write_fmt(format_args!("{image}\n"));
+
+    Ok(())
+}
+
 #[component]
 fn Title() -> Element {
     let title = use_context::<TitleState>();
@@ -53,7 +69,15 @@ fn DogView() -> Element {
         }
         div { id: "buttons",
             button { id: "skip", onclick: move |_| img_src.restart(), "Skip" }
-            button { id: "save", onclick: move |_| img_src.restart(), "Save!" }
+            button {
+                id: "save",
+                onclick: move |_| async move {
+                    let current = img_src.cloned().unwrap();
+                    img_src.restart();
+                    _ = save_dog(current).await;
+                },
+                "Save!"
+            }
         }
     }
 }
